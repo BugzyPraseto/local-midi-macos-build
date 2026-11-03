@@ -9,3 +9,6 @@ __pycache__/
 /.remote-build-run
 /StartFreeBuild.command
 /.tools/
+/GetBuildLog.command
+/*.log
+/*.log.part
