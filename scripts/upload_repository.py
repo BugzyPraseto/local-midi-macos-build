@@ -16,6 +16,7 @@ FILES = (
     ".gitignore",
     "scripts/verify_installer.py",
     "scripts/upload_repository.py",
+    "scripts/prepare_build_kit.py",
     "Local MIDI-macOS-BuildKit_2.zip",
     ".github/workflows/build-apple-silicon.yml",
 )
