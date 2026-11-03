@@ -22,6 +22,16 @@ red means failed. No build starts until all source files are confirmed uploaded.
 If an older launcher is stuck after "Writing objects", press Control+C and
 reopen this updated launcher. It will reuse the repository already created.
 
+The remote build applies a reviewed correction after verifying/extracting the
+original ZIP: macOS 12.3 is the installer and native deployment minimum because
+the bundled SciPy 1.16.1 arm64 binary requires 12.3 despite its macOS 12.0 wheel
+tag. The binary compatibility audit remains enabled. macOS 12.6.2 is supported.
+The original downloaded ZIP and the existing Intel installer are untouched.
+This correction is visible in scripts/prepare_build_kit.py and checked before
+compiling. Dependencies and models retain the kit's existing versions/hashes.
+If another build fails, the launcher downloads its failed-step log into this
+folder automatically so the assistant can inspect it without another log step.
+
 This launcher publishes the build-kit SOURCE in a public repository, as you
 approved. It leaves the built installer in a draft release. It does not change
 your account's billing settings or use a paid runner. Its repository check and
@@ -73,5 +83,6 @@ https://docs.github.com/en/billing/concepts/product-billing/github-actions
 https://docs.github.com/en/actions/reference/runners/github-hosted-runners
 https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases
 
-Preparation status: local files prepared. GitHub upload, remote compilation
-and draft release creation have not happened yet.
+The launcher reports success after the remote build completes and the downloaded
+installer passes its checksum and architecture checks. Preparing these files
+does not establish app or DAW validation on a target Mac.
