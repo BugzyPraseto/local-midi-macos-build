@@ -1,0 +1,98 @@
+name: Build Apple Silicon installer for free
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-silicon-installer
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Standard hosted runners are free in public repositories. Private repos
+    # are deliberately skipped so this workflow cannot consume paid compute.
+    if: github.event.repository.private == false
+    runs-on: macos-15
+    timeout-minutes: 180
+    permissions:
+      contents: write
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_ANALYTICS: '1'
+
+    steps:
+      - name: Download source from this repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check Apple Silicon and build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = arm64
+          xcode-select -p
+          if ! command -v cmake >/dev/null 2>&1; then
+            brew install cmake
+          fi
+          cmake --version
+          command -v gh
+          df -h .
+
+      - name: Verify and extract the original build kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' \
+            '26dacc3410dc44acd35c099c06878335d2bba094ca8285cedba95034e21eaf12' \
+            'Local MIDI-macOS-BuildKit_2.zip' | shasum -a 256 -c -
+          unzip -q 'Local MIDI-macOS-BuildKit_2.zip' -d source
+
+      - name: Compile and package the Apple Silicon engine
+        working-directory: source/Local MIDI Mac Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash BuildMac.sh --arch arm64 --jobs 2
+
+      - name: Verify the completed installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_installer.py \
+            'source/Local MIDI Mac Build/dist/macOS' --arch arm64
+          cd 'source/Local MIDI Mac Build/dist/macOS'
+          shasum -a 256 -- *.pkg > SHA256SUMS.txt
+
+      - name: Save installer in a draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: apple-silicon-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          release_notes="$RUNNER_TEMP/local-midi-release-notes.txt"
+          cat > "$release_notes" <<'NOTES'
+          Local MIDI installer for Apple Silicon Macs, macOS 12 or later.
+
+          This is an unsigned development package. It includes the app, VST3,
+          Python runtime and models. The build's native tests and relocated
+          runtime self-test passed. App and DAW checks still require a Mac.
+
+          Download the .pkg to install. The .json file records the build checks;
+          SHA256SUMS.txt records the package checksum. Existing third-party
+          notices are included in the installer.
+          NOTES
+          output_dir='source/Local MIDI Mac Build/dist/macOS'
+          release_url="$(gh release create "$RELEASE_TAG" \
+            "$output_dir"/*.pkg "$output_dir"/*.pkg.json \
+            "$output_dir/SHA256SUMS.txt" \
+            --draft --target "$GITHUB_SHA" \
+            --title 'Local MIDI 0.2.0 - Apple Silicon installer' \
+            --notes-file "$release_notes")"
+          printf '### Installer ready\n\n[Download from the draft release](%s)\n\nThe release has not been published.\n' \
+            "$release_url" >> "$GITHUB_STEP_SUMMARY"
