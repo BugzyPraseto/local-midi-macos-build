@@ -51,6 +51,10 @@ jobs:
             'Local MIDI-macOS-BuildKit_2.zip' | shasum -a 256 -c -
           unzip -q 'Local MIDI-macOS-BuildKit_2.zip' -d source
 
+      - name: Correct macOS minimum for the bundled SciPy binary
+        shell: bash
+        run: python3 scripts/prepare_build_kit.py 'source/Local MIDI Mac Build'
+
       - name: Compile and package the Apple Silicon engine
         working-directory: source/Local MIDI Mac Build
         shell: bash
@@ -77,7 +81,7 @@ jobs:
           set -euo pipefail
           release_notes="$RUNNER_TEMP/local-midi-release-notes.txt"
           cat > "$release_notes" <<'NOTES'
-          Local MIDI installer for Apple Silicon Macs, macOS 12 or later.
+          Local MIDI installer for Apple Silicon Macs, macOS 12.3 or later.
 
           This is an unsigned development package. It includes the app, VST3,
           Python runtime and models. The build's native tests and relocated
